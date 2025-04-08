@@ -1,0 +1,235 @@
+@import url('https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&display=swap');
+
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: "Play", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+}
+
+:root {
+    scroll-behavior: smooth;
+}
+::selection {
+    background: rgba(0, 0, 0, 0.066);
+    color: rgba(255, 255, 255, 0.618);
+  }
+/* --------------------------NavBar------------------------ */
+.lpNav {
+    position: sticky;
+    top: 0px;
+    background-color: black;
+    height: 80px;
+    width: 100%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 4%;
+    z-index: 1;
+}
+
+.lpNav__left {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 22px;
+}
+
+.lpNav__left div:first-child {
+    height: 48px;
+    width: 48px;
+    background-image: url('logoX.png');
+    background-size: contain;
+    overflow: hidden;
+    background-repeat: no-repeat;
+}
+
+.lpNav__left div:nth-child(2) {
+    font-weight: 600;
+}
+.lpNav__right{
+    display: flex;
+    gap: 8em;
+}
+.lpNav__right button {
+    font-family: sans-serif;
+    background-color: #FF4349;
+    border: 1px solid transparent;
+    text-align: center;
+    z-index: 0;
+    text-overflow: ellipsis;
+    height: 32px;
+    border-radius: 12px;
+    padding: 9px 16px;
+    color: #111;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+.lpNav__right button:hover{
+    cursor: pointer;
+    color: white;
+}
+.lpNav__right ul{
+    display: flex;
+    gap: 2em;
+    align-items: center;
+}
+.lpNav__right ul li {
+    list-style: none;
+}
+.lpNav__right ul li a{
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+    letter-spacing: 1px;
+    align-items: center;
+    padding: 7.5px 16px;
+    text-align: center;
+    border-radius: 9px;
+}
+.lpNav__right ul li a:hover{
+    background-color: #333333; 
+     color:#FF4349;
+}
+
+/* ----------------------------HeroSection---------------- */
+main{
+    position: relative;
+    height:86vh;
+    width:100%;
+    background-color: rgba(0, 0, 0, 0.525);
+    background-image: url('./bkg.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lpHero{
+    position: absolute;
+    display: flex;
+ flex-direction: column;
+align-items: center;
+justify-content: center;
+
+    height: 50vh;
+    width: 80vh;
+    gap: 3em;
+}
+.lpHero button{
+    color: white;
+    font-family: sans-serif;
+    background-color: #FF4349;
+    border: 1px solid transparent;
+    z-index: 0;
+    height: 60px;
+    padding: 7px 50px  ;
+    outline: 1px solid white;
+    outline-offset: 2px;
+}
+.lpHero button p{
+    font-family: sans-serif;
+    text-align: center;
+    font-weight: 100;
+    letter-spacing: 1px;
+    font-size: 1.7em;
+}
+.lpHero button:hover{
+    cursor: pointer;
+    background-color: white;
+    color: black;
+}
+.lpHero > p{
+    font-family: "Bebas Neue", sans-serif;
+    letter-spacing: 2px;
+    color: white;
+font-weight: 500;
+font-size: 1em;
+
+}
+/* -------------------------About-------------------------- */
+.lpEnd h1{
+    padding-top: 50px;
+    padding-left: 50px;
+    font-family: "Bebas Neue", sans-serif;
+    font-weight: 600;
+    width: 100%;
+    font-size: 3.3em;
+}
+.lpEnd{
+    background-color: #ECE8E1;
+    height: 77vh;
+    width: 100%;
+}
+
+
+.lpList{
+    height: 70%;
+    width: 100%;
+    display: flex;
+    align-items: start;
+}
+.container{
+    padding-top: 50px;
+    padding-left: 50px;
+    height:60vh;
+    width:100%;
+}
+/* :is(.pic,.text):hover{
+    cursor: pointer;
+} */
+.pic{
+    height:30vh;
+    width:50vh;
+    background-color: #ECE8E1;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    overflow: hidden;
+}
+.text {
+    display: flex;
+    flex-direction: column;
+    height:20px;
+    width:40vh;
+}
+.text h1,h2 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    font-variation-settings:"wdth" 100;
+}
+.text h2{
+    font-size: 1.4em; 
+
+    font-weight: 600;
+}
+.text h3{
+    font-size:  1em;
+    white-space: nowrap;
+    font-weight:400;
+}
+
+/* ------------------------Footer------------------- */
+.lp__footer{
+    display: flex;
+    flex-direction: column;
+    background-color: black;
+    color: white;
+    font-family: "Bebas Neue", sans-serif;
+    letter-spacing: 2px;
+    height: 30vh;
+    width: 100%;
+justify-content: center;
+    align-items: center;
+}
