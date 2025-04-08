@@ -15,7 +15,7 @@
 
 ::selection {
     background: rgba(0, 0, 0, 0.066);
-    color: rgba(255, 255, 255, 0.618);
+    color: rgba(153, 205, 50, 0.967);
 }
 
 /* --------------------------NavBar------------------------ */
@@ -209,8 +209,7 @@ main {
 
 .main__main {
     margin-top: 2%;
-    /* background-color: #1C1C1C; */
-    background-color: rgba(255, 255, 255, 0.821);
+    background-color: rgba(255, 255, 255, 0.912);
     height: 100%;
     width: 100%;
     border-radius: 3px;
@@ -237,7 +236,7 @@ main {
     flex-direction: column;
     min-height: 100%;
     padding-top: 14%;
-    padding-bottom: 5.60%;
+    padding-bottom: 7%;
 }
 
 .chats {
@@ -246,11 +245,13 @@ main {
     overflow: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    display: flex;
+    flex-direction: column-reverse;
 }
 
 .chat {
     border-bottom: 1px solid rgba(255, 255, 255, 0.182);
-    height: 3em;
+    padding-bottom: 1em;
     width: 100%;
     color: white;
     display: flex;
@@ -261,10 +262,11 @@ main {
 .chat p:first-child {
     font-size: 1em;
     font-weight: 600;
+    color: rgba(255, 255, 255, 0.636);
 }
 
 .chat p:last-child {
-    color: rgba(255, 255, 255, 0.636);
+    font-weight: 500;
 }
 
 .right form {
@@ -275,6 +277,7 @@ main {
 }
 
 .right form input {
+    background-color: rgba(255, 255, 255, 0.821);
     padding: 3.8% 4%;
     border-radius: 3px;
 }
@@ -294,9 +297,10 @@ main {
 
 /* ------------------------Footer------------------- */
 .lp__footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.193);
     display: flex;
     flex-direction: column;
-    background-color: #262626;
+    background-color: #0E0E0E;
     color: white;
     font-family: "Bebas Neue", sans-serif;
     letter-spacing: 2px;
@@ -304,4 +308,86 @@ main {
     width: 100%;
     justify-content: center;
     align-items: center;
+}
+
+/* ---------------------------ToolBox-------------------------------- */
+.pick {
+    display: flex;
+    color: white;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 30px;
+    font-weight: 600;
+    font-size: 1em;
+}
+
+.pencil {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+.color {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ------------------------------Color--------------------------------- */
+
+input[type="color"] {
+    -webkit-appearance: none;
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background-color: transparent;
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.274);
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border: none;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 8px;
+}
+
+input[type="color"]:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px #D74646;
+    ;
+}
+
+input[type="color"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #D74646;
+    ;
+}
+
+/* ------------------------------------Thickness---------------------------- */
+
+.pencil input {
+    border: none;
+    width: 60px;
+    height: 30px;
+    text-align: center;
+    border-radius: 3px;
+    color: black;
+    font-weight: 600;
+}
+.pencil input::placeholder {
+    color: rgb(0, 0, 0);
+    font-weight: 600;
+}
+
+.pencil input:focus {
+    outline: none;
 }
