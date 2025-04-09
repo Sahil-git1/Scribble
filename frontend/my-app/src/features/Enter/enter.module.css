@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+.Enter *{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: "Bebas Neue", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    font-variation-settings:
+      "wdth" 100;
+}
+.Enter {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+     background-color:#ebe8e323;
+}
+/* ---------------------------------Main----------------------- */
+.Enter main{
+    display: flex;
+    flex-direction: column;
+    gap: 19%;
+    align-items: center;
+    justify-content: center;
+    border:1px solid black;
+    height: 70vh;
+    width: 70%;
+    background-color: rgb(15, 25, 35);
+    font-size: 18px;
+    line-height: 28px;
+    color: rgb(236, 232, 225);
+}
+.Enter main >p{
+    font-weight: 700;
+    font-size: 64px;
+    line-height: 64px;
+    font-family: sans-serif;
+    text-transform: uppercase;
+    max-width: 784px;
+    color: rgb(236, 232, 225);
+}
+.Enter .choose{
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2em;
+}
+.Enter .choose button{
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    padding: 10% 50%;
+    border: none;
+    font-size: 16px;
+    text-align: center;
+    align-content: center;
+    text-transform: uppercase;
+}
+.Enter .choose button{
+    background-color:#FF4655;
+   color: #ECE8E1;
+  font-weight: 500;
+ white-space: nowrap;
+}
+ .Enter .choose button:last-child:hover{
+    background-color: rgb(236, 232, 225);;
+    color: rgb(15, 25, 35);
+    cursor: pointer;
+ }
+
+ .Enter .choose input{
+    background: transparent;
+    border: 1px solid #cbcbcb;
+    box-sizing: border-box;
+    caret-color: inherit;
+    color: inherit;
+    display: block;
+    font-size: 20px;
+    height: 64px;
+    line-height: 64px;
+    outline: 0;
+    padding-left: 16px;
+    padding-right: 40px;
+    text-align: left;
+    width: 100%;
+ }
+ .Enter .choose input:focus{
+    border: 1px solid rgba(255, 255, 255, 0.918);
+ }

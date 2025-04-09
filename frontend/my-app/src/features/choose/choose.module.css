@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+.ChooseX *{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: "Bebas Neue", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    font-variation-settings:
+      "wdth" 100;
+}
+.ChooseX {
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+     background-color:#ebe8e323;
+}
+/* ---------------------------------Main----------------------- */
+.ChooseX main{
+    display: flex;
+    flex-direction: column;
+    gap: 19%;
+    align-items: center;
+    justify-content: center;
+    border:1px solid black;
+    height: 70vh;
+    width: 70%;
+    background-color: rgb(15, 25, 35);
+    font-size: 18px;
+    line-height: 28px;
+    color: rgb(236, 232, 225);
+}
+.ChooseX main >p{
+    font-weight: 700;
+    font-size: 64px;
+    line-height: 64px;
+    font-family: sans-serif;
+    text-transform: uppercase;
+    max-width: 784px;
+    color: rgb(236, 232, 225);
+}
+.ChooseX .choose{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2em;
+}
+.ChooseX .choose button{
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+    font-style: normal;
+    padding: 7% 10%;
+    border: none;
+    font-size: 16px;
+    text-align: center;
+    align-content: center;
+    text-transform: uppercase;
+}
+.ChooseX .choose button:last-child{
+    background-color:#FF4655;
+   color: #ECE8E1;
+  font-weight: 500;
+ white-space: nowrap;
+}
+.ChooseX .choose button:first-child{
+    background-color: rgb(236, 232, 225);;
+    color: rgb(15, 25, 35);
+   font-weight: 500;
+  white-space: nowrap;
+ }
+.ChooseX  .choose button:first-child:hover{
+    background-color:#FF4655;
+    color: #ECE8E1;
+    cursor: pointer;
+ }
+.ChooseX  .choose button:last-child:hover{
+    background-color: rgb(236, 232, 225);;
+    color: rgb(15, 25, 35);
+    cursor: pointer;
+ }
