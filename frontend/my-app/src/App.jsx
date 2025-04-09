@@ -13,17 +13,17 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 const App = () => {
   return (
     <Router>
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/changePassword" element={<ChangePassword />} />
-      <Route path="/mail" element={<Mail />} />
-      <Route path="/mailEnd" element={<MailEnd />} />
-      <Route path="/choose" element={<Choose />} />
-      <Route path="/enter" element={<Enter />} />
-      <Route path="/main" element={<Main />} />
-    </Routes>
+          <Routes>
+             <Route path="/" element={<Landing />} />
+             <Route path="/login" element={<Login />} />
+             <Route path="/register" element={<Register />} />
+             <Route path="/changePassword" element={<ChangePassword />} />
+             <Route path="/mail" element={<Mail />} />
+             <Route path="/mailEnd" element={<MailEnd />} />
+             <Route path="/choose" element={<Choose />} />
+             <Route path="/enter" element={<Enter />} />
+             <Route path="/main" element={<Main />} />
+          </Routes>
   </Router>
   )
 }

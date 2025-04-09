@@ -1,0 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Iansui&display=swap');
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: "Iansui", cursive;
+}
+
+body {
+  background-color: limegreen
+}
+
+span {
+  font-size: 1.15em;
+}
+
+main {
+  text-shadow: 0px 0px 0px black;
+  padding: 3vh;
+  font-family: Consolas, monospace;
+  font-size: 2.6em;
+  height: 100vh;
+  width: 100%;
+  background-color: #FFEBEE;
+  z-index: 1;
+}
+
+.logo {
+  margin-top: 37vh;
+  text-align: center;
+  font-size: 6.5em;
+  font-weight: 500;
+  animation: bounceIn 2.5s ease-in-out forwards;
+  text-shadow: 0px 0px 0px black;
+}
+
+.two {
+  text-shadow: 0px 0px 0px black;
+  font-size: 2.3em;
+  font-weight: 500;
+  margin-top: 1%;
+  text-align: center;
+
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+
+  30% {
+    transform: translateX(20px);
+    opacity: 1;
+  }
+
+  50% {
+    transform: translateX(-10px);
+  }
+
+  70% {
+    transform: translateX(5px);
+  }
+
+  85% {
+    transform: translateX(-3px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}

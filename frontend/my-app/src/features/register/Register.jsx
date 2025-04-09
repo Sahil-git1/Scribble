@@ -13,11 +13,12 @@ const Register = () => {
                     <input type="text" placeholder="player name" id="name"></input>
                     <label htmlFor="pwd">Password</label>
                     <input type="password" placeholder="password"></input>
-                </form>
-
-                <button>
+                  <button>
                     Create Account
                 </button>
+                </form>
+
+             
             </main>
         </div>
     )

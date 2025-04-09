@@ -99,10 +99,10 @@ font-weight: 700;
 color: rgba(0, 0, 0, 0.264);
 background-color: #F5F5F5;
 }
-.logX main  button:hover{
+/* .logX main  button:hover{
     cursor: pointer;
-}
-.logX main  button:focus{
+} */
+/* .logX main  button:focus{
     background-color: black;
     color: white;
-}
+} */
