@@ -86,13 +86,13 @@ font-weight: 700;
 color: rgba(0, 0, 0, 0.264);
 background-color: #F5F5F5;
 }
-.Register main  button:hover{
+/* .Register main  button:hover{
     cursor: pointer;
 }
 .Register main  button:focus{
     background-color: black;
     color: white;
-}
+} */
 
 .Register main label{
     font-size: 16px;

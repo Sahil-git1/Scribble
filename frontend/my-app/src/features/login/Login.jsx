@@ -25,7 +25,7 @@ const Login = () => {
 
             if (response.ok) {
                 // success - redirect to /main
-                navigate('/main');
+                navigate('/choose');
             } else {
                 // error - stay and show message
                 setError('Invalid email or password');
