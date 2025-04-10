@@ -10,6 +10,9 @@ const cors = require('cors')
 const corsOptions = require('./config/corsOptions')
 const connectDB = require('./config/dbConn')
 const mongoose = require('mongoose')
+const http = require('http');
+const { Server } = require('socket.io');
+
 
 connectDB()
 app.use(logger)
