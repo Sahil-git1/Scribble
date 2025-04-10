@@ -2,12 +2,12 @@ import React from 'react'
 import styles from './register.module.css';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-const Register = () => {
+const Register = ({username,setUsername,email,setEmail}) => {
 
 const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+    
     const [password, setPassword] = useState('');
-    const [username,setUsername] = useState('');
+   
     const [error, setError] = useState('');
 
     const allFieldsFilled = email.trim() !== '' && password.trim() !== '' && username.trim() !== '';
@@ -15,7 +15,7 @@ const navigate = useNavigate();
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch('http://localhost:5000/api/login', {
+            const response = await fetch('http://localhost:3500/users', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

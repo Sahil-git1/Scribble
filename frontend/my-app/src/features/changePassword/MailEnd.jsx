@@ -3,7 +3,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
-const MailEnd = () => {
+const MailEnd = ({email,setEmail}) => {
 
 
     const navigate = useNavigate();

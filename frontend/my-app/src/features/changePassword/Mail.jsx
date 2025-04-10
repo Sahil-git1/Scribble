@@ -3,7 +3,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
-const Mail = () => {
+const Mail = ({email,setEmail}) => {
 
 
     const navigate = useNavigate();

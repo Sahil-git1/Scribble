@@ -2,10 +2,9 @@ import styles from './changePassword.module.css';
 import React from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-const ChangePassword = () => {
+const ChangePassword = ({email,setEmail}) => {
 
  const navigate = useNavigate();
-    const [email, setEmail] = useState('');
     const [error, setError] = useState('');
 
 

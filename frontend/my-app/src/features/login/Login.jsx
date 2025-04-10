@@ -2,20 +2,19 @@ import React from 'react'
 import styles from './login.module.css';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-const Login = () => {
-
+import { useDispatch } from 'react-redux';
+import {login} from './authSlice'
+const Login = ({email,setEmail}) => {
+    const dispatch = useDispatch();
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-
-
     const allFieldsFilled = email.trim() !== '' && password.trim() !== '';
 
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const response = await fetch('http://localhost:5000/api/login', {
+            const response = await fetch('http://localhost:3500/users/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -25,6 +24,7 @@ const Login = () => {
 
             if (response.ok) {
                 // success - redirect to /main
+                dispatch(login());
                 navigate('/choose');
             } else {
                 // error - stay and show message

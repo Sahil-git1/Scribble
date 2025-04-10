@@ -5,13 +5,30 @@ const bcrypt = require('bcrypt')
 // @desc Get all users
 // @route GET /users
 // @access Private
-const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await User.find().select('-password').lean()
-  if (!users?.length) {
-    return res.status(400).json({ message: 'No users found' })
-  }
-  res.json(users)
-})
+const loginUser = asyncHandler(async (req, res) => 
+  {
+    const { email, password } = req.body 
+  
+    // Validate input
+    if (!email || !password ) {
+      return res.status(400).json({ message: 'Username, current password, and new password are required' })
+    }
+  
+    // Find the user
+    const user = await User.findOne({ email }).exec()
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+  
+    // Verify current password
+    const match = await bcrypt.compare(password, user.password)
+    if (!match) {
+      return res.status(401).json({ message: 'Incorrect password' })
+    }
+    
+    res.json({ message: `Success` })
+  })
+
 
 // @desc Create new user
 // @route POST /users
@@ -101,9 +118,32 @@ const deleteUser = asyncHandler(async (req, res) => {
   res.json({ message: reply })
 })
 
+const userRoom = asyncHandler(async (req, res) => {
+  const { email, Id } = req.body;
+
+  if (!email || !Id) {
+    return res.status(400).json({ message: 'Username and Id are required' });
+  }
+
+  console.log('Received data:', req.body); // Debug
+
+  const user = await User.findOne({ email }).exec()
+
+  if (user) {
+    user.roomId = Id;
+    await user.save();
+    return res.status(200).json({ message: 'Room updated successfully' });
+  } else {
+    return res.status(404).json({ message: 'User not found' });
+  }
+});
+
+
+
 module.exports = {
-  getAllUsers,
+  loginUser,
   createNewUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  userRoom
 }

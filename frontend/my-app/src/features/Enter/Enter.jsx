@@ -2,24 +2,24 @@ import React from 'react'
 import styles from './enter.module.css';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
-const Enter = () => {
+const Enter = ({Id,setId,email,setEmail}) => {
 
     const navigate = useNavigate();
     const [error, setError] = useState('');
- const [Id, setId] = useState('');
 
     const handleEnter = async () => {
-      if(Id === ''){
-        return
+      if (!Id || Id.trim() === '') {
+        setError("Room ID is required");
+        return;
       }
       else{
         try {
-            const response = await fetch('http://localhost:5000/api/login', {
+            const response = await fetch('http://localhost:3500/users/room', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({email,Id})
             });
 
             if (response.ok) {
@@ -47,6 +47,7 @@ const Enter = () => {
         <button type="button" onClick={()=>handleEnter()} >ENTER</button>
     </div>
     </main>
+    {error && <p style={{ color: 'black', fontWeight: 500, marginTop: '10px', fontFamily: 'sans-serif' }}>{error}</p>}
     </div>
     )
   return content
