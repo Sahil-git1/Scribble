@@ -246,8 +246,9 @@
     overflow: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    overflow-y: auto;
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
 }
 
 .playground .chat {
