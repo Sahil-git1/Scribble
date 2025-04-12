@@ -7,6 +7,7 @@ import { useDispatch } from 'react-redux';
 import { logout } from '../login/authSlice';
 import { useNavigate } from 'react-router-dom';
 import { scribbleWords } from '../../assets/scribbleWords';
+import { simpleCategories } from '../../assets/simpleCategories';
 import { io } from "socket.io-client";
 import HandDrawingCanvas from './HandDrawingCanvas';
 
@@ -35,6 +36,7 @@ const Main = ({ Id, email }) => {
   const [wordContributed, setWordContributed] = useState(false);
   const [pencilSize, setPencilSize] = useState(4);
   const [pencilColor, setPencilColor] = useState('#00ccff');
+  const [usedWords, setUsedWords] = useState([]);
 
   // Chat Message scroll
   useEffect(() => {
@@ -105,9 +107,11 @@ const Main = ({ Id, email }) => {
     // Function to fetch a quick temporary word while loading
     const fetchTemporaryWord = async () => {
       try {
-        // Use a simple reliable category
-        const simpleCategory = "thing";
-        const tempResponse = await fetch(`https://api.datamuse.com/words?ml=${simpleCategory}&max=10`);
+        // Use a random category from our extensive list
+        const randomCategoryIndex = Math.floor(Math.random() * simpleCategories.length);
+        const randomCategory = simpleCategories[randomCategoryIndex];
+        
+        const tempResponse = await fetch(`https://api.datamuse.com/words?ml=${randomCategory}&max=10`);
         const tempData = await tempResponse.json();
         
         if (tempData && tempData.length > 0) {
@@ -117,13 +121,17 @@ const Main = ({ Id, email }) => {
             return word.length >= 3 && 
                    word.length <= 8 && 
                    !word.includes(' ') && 
-                   /^[a-zA-Z]+$/.test(word);
+                   /^[a-zA-Z]+$/.test(word) &&
+                   !usedWords.includes(word.toLowerCase());
           });
           
           if (filteredWords.length > 0) {
             const randomIndex = Math.floor(Math.random() * filteredWords.length);
             const tempWord = filteredWords[randomIndex].word;
             const tempMasked = maskRandomLetters(tempWord);
+            
+            // Add to used words
+            setUsedWords(prev => [...prev, tempWord.toLowerCase()]);
             
             // Set locally 
             setOriginalWord(tempWord);
@@ -216,6 +224,7 @@ const Main = ({ Id, email }) => {
       setShowOriginal(false);
       setError('');
       setChatMessages([]);
+      setUsedWords([]);
       getWord();
     });
     
@@ -285,9 +294,9 @@ const Main = ({ Id, email }) => {
     }
     
     try {
-      // Try to get a word from the API
-      const randomNumber = Math.floor(Math.random() * 41);
-      const category = scribbleWords[randomNumber];
+      // Try to get a word from the API using our extensive categories
+      const randomNumber = Math.floor(Math.random() * simpleCategories.length);
+      const category = simpleCategories[randomNumber];
       
       // Try with higher max to ensure we get results
       const response = await fetch(`https://api.datamuse.com/words?ml=${category}&max=30`);
@@ -295,12 +304,14 @@ const Main = ({ Id, email }) => {
 
       if (data && data.length > 0) {
         // Filter to ensure good drawing words (single word, reasonable length, only letters)
+        // Also filter out already used words
         const filteredWords = data.filter(item => {
           const word = item.word;
           return word.length >= 3 && 
                  word.length <= 10 && 
                  !word.includes(' ') && 
-                 /^[a-zA-Z]+$/.test(word);
+                 /^[a-zA-Z]+$/.test(word) &&
+                 !usedWords.includes(word.toLowerCase());
         });
         
         // If we have filtered words, use one
@@ -308,6 +319,9 @@ const Main = ({ Id, email }) => {
           // Use a random word from the filtered results
           const randomIndex = Math.floor(Math.random() * filteredWords.length);
           const chosenWord = filteredWords[randomIndex].word;
+          
+          // Add to used words list
+          setUsedWords(prev => [...prev, chosenWord.toLowerCase()]);
           
           // Mask the word
           const maskedWord = maskRandomLetters(chosenWord);
@@ -339,27 +353,31 @@ const Main = ({ Id, email }) => {
   // Helper function to try a backup category
   const tryBackupCategory = async () => {
     try {
-      // Use a different category for backup
-      const backupCategories = ["animal", "food", "vehicle", "furniture", "clothing"];
-      const backupCategory = backupCategories[Math.floor(Math.random() * backupCategories.length)];
+      // Use a different random category from our extensive list as backup
+      const randomIndex = Math.floor(Math.random() * simpleCategories.length);
+      const backupCategory = simpleCategories[randomIndex];
       
       const backupResponse = await fetch(`https://api.datamuse.com/words?ml=${backupCategory}&max=30`);
       const backupData = await backupResponse.json();
       
       if (backupData && backupData.length > 0) {
-        // Filter to ensure good drawing words
+        // Filter to ensure good drawing words and not already used
         const filteredWords = backupData.filter(item => {
           const word = item.word;
           return word.length >= 3 && 
                  word.length <= 10 && 
                  !word.includes(' ') && 
-                 /^[a-zA-Z]+$/.test(word);
+                 /^[a-zA-Z]+$/.test(word) &&
+                 !usedWords.includes(word.toLowerCase());
         });
         
         if (filteredWords.length > 0) {
           // Use a random word from the filtered results
           const randomIndex = Math.floor(Math.random() * filteredWords.length);
           const chosenWord = filteredWords[randomIndex].word;
+          
+          // Add to used words list
+          setUsedWords(prev => [...prev, chosenWord.toLowerCase()]);
           
           // Mask the word
           const maskedWord = maskRandomLetters(chosenWord);
