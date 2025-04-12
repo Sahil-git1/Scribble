@@ -1,8 +1,6 @@
 # 🖌️ Scribble Showdown 🎮  
 ### A Real-Time Multiplayer Drawing & Guessing Game Powered by Hand Gestures & AI 🎯
 
-![Scribble Showdown Banner](https://your-image-link-here.com/banner.png)
-
 Welcome to **Scribble Showdown** – the ultimate Pictionary-style game where you *draw* without a mouse and *guess* against your friends in real-time!  
 All you need is your webcam and your imagination. No controllers, no buttons – just ✋ and 🧠.
 
