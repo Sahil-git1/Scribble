@@ -2,11 +2,18 @@ import React, { useEffect, useRef } from 'react';
 import { Hands } from '@mediapipe/hands';
 import { Camera } from '@mediapipe/camera_utils';
 
-const HandDrawingCanvas = ({ color = '#00ccff', thickness = 4, eraserSize = 30 }) => {
+const HandDrawingCanvas = ({ 
+  color = '#00ccff', 
+  thickness = 4, 
+  eraserSize = 30,
+  socket = null,
+  roomId = null 
+}) => {
   const canvasRef = useRef(null);
   const indicatorCanvasRef = useRef(null);
   const videoRef = useRef(null);
   const lastPosition = useRef({ x: null, y: null });
+  const drawingRef = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,6 +43,44 @@ const HandDrawingCanvas = ({ color = '#00ccff', thickness = 4, eraserSize = 30 }
 
     // Update size on window resize
     window.addEventListener('resize', updateCanvasSize);
+
+    // Socket event listener for receiving drawing data
+    if (socket && roomId) {
+      socket.on("receive_drawing", (data) => {
+        if (data.roomId === roomId) {
+          if (data.type === 'draw') {
+            drawLine(ctx, data.fromX, data.fromY, data.toX, data.toY, data.color, data.thickness);
+          } else if (data.type === 'erase') {
+            eraseArea(ctx, data.x, data.y, data.size);
+          } else if (data.type === 'clear') {
+            clearCanvas(ctx, canvas.width, canvas.height);
+          }
+        }
+      });
+    }
+
+    // Drawing functions
+    const drawLine = (context, fromX, fromY, toX, toY, strokeColor, strokeWidth) => {
+      context.beginPath();
+      context.moveTo(fromX, fromY);
+      context.lineTo(toX, toY);
+      context.strokeStyle = strokeColor;
+      context.lineWidth = strokeWidth;
+      context.lineCap = 'round';
+      context.stroke();
+    };
+
+    const eraseArea = (context, x, y, size) => {
+      context.beginPath();
+      context.arc(x, y, size/2, 0, 2 * Math.PI);
+      context.fillStyle = '#f5f5f5';
+      context.fill();
+    };
+
+    const clearCanvas = (context, width, height) => {
+      context.fillStyle = '#f5f5f5';
+      context.fillRect(0, 0, width, height);
+    };
 
     const hands = new window.Hands({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
@@ -78,7 +123,12 @@ const HandDrawingCanvas = ({ color = '#00ccff', thickness = 4, eraserSize = 30 }
           indicatorCtx.arc(x, y, 3, 0, 2 * Math.PI);
           indicatorCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
           indicatorCtx.fill();
-          lastPosition.current = { x: null, y: null };
+          
+          // If was drawing but now stopped, reset lastPosition
+          if (drawingRef.current) {
+            drawingRef.current = false;
+            lastPosition.current = { x: null, y: null };
+          }
           return;
         }
 
@@ -96,10 +146,18 @@ const HandDrawingCanvas = ({ color = '#00ccff', thickness = 4, eraserSize = 30 }
           indicatorCtx.stroke();
 
           // Erase the area
-          ctx.beginPath();
-          ctx.arc(eraserX, eraserY, eraserSize/2, 0, 2 * Math.PI);
-          ctx.fillStyle = '#f5f5f5';
-          ctx.fill();
+          eraseArea(ctx, eraserX, eraserY, eraserSize);
+          
+          // Broadcast the erase action to other users
+          if (socket && roomId) {
+            socket.emit("send_drawing", {
+              roomId,
+              type: 'erase',
+              x: eraserX,
+              y: eraserY,
+              size: eraserSize
+            });
+          }
           
           lastPosition.current = { x: null, y: null };
           return;
@@ -116,18 +174,28 @@ const HandDrawingCanvas = ({ color = '#00ccff', thickness = 4, eraserSize = 30 }
 
         if (lastPosition.current.x === null) {
           lastPosition.current = { x: smoothX, y: smoothY };
+          drawingRef.current = true;
         } else {
-          ctx.beginPath();
-          ctx.moveTo(lastPosition.current.x, lastPosition.current.y);
-          ctx.lineTo(smoothX, smoothY);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = thickness;
-          ctx.lineCap = 'round';
-          ctx.stroke();
+          drawLine(ctx, lastPosition.current.x, lastPosition.current.y, smoothX, smoothY, color, thickness);
+          
+          // Broadcast the drawing action to other users
+          if (socket && roomId) {
+            socket.emit("send_drawing", {
+              roomId,
+              type: 'draw',
+              fromX: lastPosition.current.x,
+              fromY: lastPosition.current.y,
+              toX: smoothX,
+              toY: smoothY,
+              color,
+              thickness
+            });
+          }
 
           lastPosition.current = { x: smoothX, y: smoothY };
         }
       } else {
+        drawingRef.current = false;
         lastPosition.current = { x: null, y: null };
       }
     });
@@ -145,8 +213,29 @@ const HandDrawingCanvas = ({ color = '#00ccff', thickness = 4, eraserSize = 30 }
     return () => {
       camera.stop();
       window.removeEventListener('resize', updateCanvasSize);
+      if (socket) {
+        socket.off("receive_drawing");
+      }
     };
-  }, [color, thickness, eraserSize]);
+  }, [color, thickness, eraserSize, socket, roomId]);
+
+  // Add a clear canvas button
+  const handleClearCanvas = () => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f5f5f5';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Broadcast the clear action
+      if (socket && roomId) {
+        socket.emit("send_drawing", {
+          roomId,
+          type: 'clear'
+        });
+      }
+    }
+  };
 
   return (
     <div
@@ -203,6 +292,25 @@ const HandDrawingCanvas = ({ color = '#00ccff', thickness = 4, eraserSize = 30 }
           pointerEvents: 'none',
         }}
       />
+
+      {/* Clear button */}
+      <button
+        onClick={handleClearCanvas}
+        style={{
+          position: 'absolute',
+          bottom: '10px',
+          right: '10px',
+          padding: '5px 10px',
+          background: '#f44336',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          zIndex: 3,
+        }}
+      >
+        Clear Canvas
+      </button>
     </div>
   );
 };

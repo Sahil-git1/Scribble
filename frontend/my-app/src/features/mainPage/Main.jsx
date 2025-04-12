@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { scribbleWords } from '../../assets/scribbleWords';
 import { io } from "socket.io-client";
 import HandDrawingCanvas from './HandDrawingCanvas';
+
 const Main = ({ Id, email }) => {
   const [showOriginal, setShowOriginal] = useState(false);
   const [originalWord, setOriginalWord] = useState('');
@@ -27,6 +28,8 @@ const Main = ({ Id, email }) => {
   const [error, setError] = useState('');
   const [gameActive, setGameActive] = useState(true);
   const [wordContributed, setWordContributed] = useState(false);
+  const [pencilSize, setPencilSize] = useState(4);
+  const [pencilColor, setPencilColor] = useState('#00ccff');
 
   // Chat Message scroll
   useEffect(() => {
@@ -173,6 +176,16 @@ const Main = ({ Id, email }) => {
     setChatInput('');
   };
 
+  // Handle pencil size change
+  const handlePencilSizeChange = (e) => {
+    setPencilSize(parseInt(e.target.value) || 4);
+  };
+
+  // Handle color change
+  const handleColorChange = (e) => {
+    setPencilColor(e.target.value);
+  };
+
   // Initial word fetch
   useEffect(() => {
     if (isConnected && username) {
@@ -255,18 +268,40 @@ const Main = ({ Id, email }) => {
               <div style={{ whiteSpace: "nowrap" }}>{timer} s</div>
             </div>
             <div className={styles.pick}>
-              <div className={styles.pencil}>
+              {/* <div className={styles.pencil}>
                 <label htmlFor="pencil">PENCIL</label>
-                <input type="number" name="pencil" id="pencil" placeholder="9" min="1" max="50" step="2" />
-              </div>
-              <div className={styles.color}>
+                <input 
+                  type="number" 
+                  name="pencil" 
+                  id="pencil" 
+                  placeholder="4" 
+                  min="1" 
+                  max="50" 
+                  step="1" 
+                  value={pencilSize}
+                  onChange={handlePencilSizeChange}
+                />
+              </div> */}
+              {/* <div className={styles.color}>
                 <label htmlFor="pencilColor">COLOR</label>
-                <input type="color" name="pencilColor" id="pencilColor" />
-              </div>
+                <input 
+                  type="color" 
+                  name="pencilColor" 
+                  id="pencilColor" 
+                  value={pencilColor}
+                  onChange={handleColorChange}
+                />
+              </div> */}
             </div>
           </div>
           <div className={styles.main__main}>
-            <HandDrawingCanvas  color = {'#00ccff'} thickness = {4} eraserSize = {30} />
+            <HandDrawingCanvas 
+              color={'blue'} 
+              thickness={pencilSize} 
+              eraserSize={30} 
+              socket={socket.current}
+              roomId={Id}
+            />
           </div>
         </div>
         <div className={styles.right}>
@@ -293,3 +328,6 @@ const Main = ({ Id, email }) => {
 }
 
 export default Main;
+
+
+// Version 0

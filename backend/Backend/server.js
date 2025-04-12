@@ -214,42 +214,51 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Handle disconnect
-  socket.on("disconnect", () => {
-    for (const roomId in rooms) {
-      if (rooms[roomId].players && rooms[roomId].players[socket.id]) {
-        delete rooms[roomId].players[socket.id];
-
-        // Notify room of updated player list
-        io.to(roomId).emit("update_players", getPlayerList(roomId));
-
-        // Clean up empty room
-        if (Object.keys(rooms[roomId].players).length === 0) {
-          // Clear any intervals
-          if (rooms[roomId].gameState.timerInterval) {
-            clearInterval(rooms[roomId].gameState.timerInterval);
-          }
-          delete rooms[roomId];
-        }
-
-        break;
-      }
-    }
-
-    console.log("User disconnected: " + socket.id);
+  // Handle drawing events
+  socket.on("send_drawing", (data) => {
+    // Broadcast drawing data to all other clients in the room
+    socket.to(data.roomId).emit("receive_drawing", data);
   });
+
+ // Handle disconnect
+ socket.on("disconnect", () => {
+  for (const roomId in rooms) {
+    if (rooms[roomId].players && rooms[roomId].players[socket.id]) {
+      delete rooms[roomId].players[socket.id];
+
+      // Notify room of updated player list
+      io.to(roomId).emit("update_players", getPlayerList(roomId));
+
+      // Clean up empty room
+      if (Object.keys(rooms[roomId].players).length === 0) {
+        // Clear any intervals
+        if (rooms[roomId].gameState.timerInterval) {
+          clearInterval(rooms[roomId].gameState.timerInterval);
+        }
+        delete rooms[roomId];
+      }
+
+      break;
+    }
+  }
+
+  console.log("User disconnected: " + socket.id);
+});
 });
 
 mongoose.connection.once("open", () => {
-  console.log("Connected to MongoDB");
-  server.listen(PORT, () => {
-    console.log(`Server is listening on port ${PORT}`);
-  });
+console.log("Connected to MongoDB");
+server.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
+});
 });
 
 mongoose.connection.on('error',err=>{
-    console.log(err)
-    logEvents(`${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`,
-        'mongoErrLog.log'
-    )
+  console.log(err)
+  logEvents(`${err.no}: ${err.code}\t${err.syscall}\t${err.hostname}`,
+      'mongoErrLog.log'
+  )
 })
+
+
+// Version 0
