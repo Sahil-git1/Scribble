@@ -14,7 +14,7 @@ const Main = ({ Id, email }) => {
   const [showOriginal, setShowOriginal] = useState(false);
   const [originalWord, setOriginalWord] = useState('');
   const [word, setWord] = useState('');
-  const [timer, setTimer] = useState(90);
+  const [timer, setTimer] = useState(120);
   const [round, setRound] = useState(1);
   const [chatInput, setChatInput] = useState('');
   const [score, setScore] = useState(0);
@@ -26,7 +26,12 @@ const Main = ({ Id, email }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
-  const [gameActive, setGameActive] = useState(true);
+  const [gameActive, setGameActive] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [isHost, setIsHost] = useState(false);
+  const [isDrawer, setIsDrawer] = useState(false);
+  const [currentDrawer, setCurrentDrawer] = useState('');
+  const [roomFull, setRoomFull] = useState(false);
   const [wordContributed, setWordContributed] = useState(false);
   const [pencilSize, setPencilSize] = useState(4);
   const [pencilColor, setPencilColor] = useState('#00ccff');
@@ -43,12 +48,10 @@ const Main = ({ Id, email }) => {
     socket.current = io("http://localhost:3500");
     
     socket.current.on("connect", () => {
-      console.log("Socket connected");
       setIsConnected(true);
     });
     
     socket.current.on("disconnect", () => {
-      console.log("Socket disconnected");
       setIsConnected(false);
     });
     
@@ -58,32 +61,192 @@ const Main = ({ Id, email }) => {
     
     socket.current.on("update_players", (playersList) => {
       setPlayers(playersList);
+      
+      // Check if user is host and/or drawer
+      const currentPlayer = playersList.find(player => player.username === username);
+      if(currentPlayer) {
+        setIsHost(currentPlayer.isHost);
+        setIsDrawer(currentPlayer.isCurrentDrawer);
+      }
+      
+      // Find the current drawer's name
+      const drawer = playersList.find(player => player.isCurrentDrawer);
+      if (drawer) {
+        setCurrentDrawer(drawer.username);
+      }
     });
     
-    // Listen for game state updates
+    socket.current.on("drawer_update", (data) => {
+      setIsDrawer(data.isDrawer);
+      setCurrentDrawer(data.drawerName);
+      
+      if (data.isDrawer) {
+        setError("You are the drawer! Others will try to guess your word.");
+        setTimeout(() => setError(''), 5000);
+        
+        // Reset word state for new drawer
+        setWordContributed(false);
+        
+        // Set a temporary immediate word via API
+        fetchTemporaryWord();
+        
+        // Also get a better word with more time
+        setTimeout(() => {
+          getWord();
+        }, 500);
+      } else {
+        // Reset word contributed state since we're not the drawer
+        setWordContributed(false);
+        setError(`${data.drawerName} is drawing now. Try to guess the word!`);
+        setTimeout(() => setError(''), 5000);
+      }
+    });
+    
+    // Function to fetch a quick temporary word while loading
+    const fetchTemporaryWord = async () => {
+      try {
+        // Use a simple reliable category
+        const simpleCategory = "thing";
+        const tempResponse = await fetch(`https://api.datamuse.com/words?ml=${simpleCategory}&max=10`);
+        const tempData = await tempResponse.json();
+        
+        if (tempData && tempData.length > 0) {
+          // Get a simple word from the results
+          const filteredWords = tempData.filter(item => {
+            const word = item.word;
+            return word.length >= 3 && 
+                   word.length <= 8 && 
+                   !word.includes(' ') && 
+                   /^[a-zA-Z]+$/.test(word);
+          });
+          
+          if (filteredWords.length > 0) {
+            const randomIndex = Math.floor(Math.random() * filteredWords.length);
+            const tempWord = filteredWords[randomIndex].word;
+            const tempMasked = maskRandomLetters(tempWord);
+            
+            // Set locally 
+            setOriginalWord(tempWord);
+            setWord(tempMasked);
+            
+            // Also send to all players
+            if (socket.current) {
+              socket.current.emit("set_word", {
+                roomId: Id,
+                originalWord: tempWord,
+                maskedWord: tempMasked
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // Will rely on getWord() call instead
+      }
+    };
+    
+    // Listen for game state updates with more robust handling
     socket.current.on("game_state_update", (gameState) => {
       setTimer(gameState.timer);
       setRound(gameState.round);
-      if (gameState.originalWord) setOriginalWord(gameState.originalWord);
-      if (gameState.maskedWord) setWord(gameState.maskedWord);
+      
+      // Only update words if they actually exist in the game state
+      if (gameState.originalWord && gameState.originalWord.trim() !== '') {
+        setOriginalWord(gameState.originalWord);
+      }
+      
+      if (gameState.maskedWord && gameState.maskedWord.trim() !== '') {
+        setWord(gameState.maskedWord);
+      }
+      
       setShowOriginal(gameState.showOriginal);
       setGameActive(gameState.active);
+      setGameStarted(gameState.hasStarted);
+      
+      // If we're the drawer, there's no word set, and the game has started, get a word
+      if (gameState.hasStarted && 
+          isDrawer && 
+          (!gameState.originalWord || gameState.originalWord.trim() === '') && 
+          !wordContributed) {
+        setTimeout(() => getWord(), 300);
+      }
+    });
+
+    socket.current.on("room_full", (data) => {
+      setRoomFull(true);
+      setError(data.message);
+    });
+    
+    socket.current.on("game_started", () => {
+      setGameStarted(true);
+      setHasAnswered(false);
+      setWordContributed(false);
+      
+      // Add a forced word get for drawer
+      if (isDrawer) {
+        // Get word immediately
+        getWord();
+        
+        // And also try again shortly after
+        setTimeout(() => {
+          getWord();
+        }, 500);
+      }
+    });
+    
+    socket.current.on("start_game_error", (data) => {
+      setError(data.message);
+      setTimeout(() => setError(''), 3000);
+    });
+    
+    socket.current.on("restart_game_error", (data) => {
+      setError(data.message);
+      setTimeout(() => setError(''), 3000);
+    });
+    
+    socket.current.on("game_restarted", () => {
+      setGameStarted(true);
+      setGameActive(true);
+      setHasAnswered(false);
+      setWordContributed(false);
+      setScore(0);
+      setRound(1);
+      setTimer(120);
+      setWord('');
+      setOriginalWord('');
+      setShowOriginal(false);
+      setError('');
+      setChatMessages([]);
+      getWord();
     });
     
     socket.current.on("new_round", () => {
       setHasAnswered(false);
       setWordContributed(false);
-      getWord(); // All players can potentially contribute a word
+      
+      // Only the drawer should get a new word, and with a delay to ensure state is updated
+      if (isDrawer) {
+        setTimeout(() => {
+          getWord();
+        }, 500);
+      }
     });
     
     socket.current.on("game_ended", () => {
-      alert("Game Over! Check the final scores.");
+      // Ask for confirmation before logging out
+      const confirmLogout = window.confirm("Game Over! Would you like to logout?");
+      if (confirmLogout) {
+        handleLogout();
+      } else {
+        // Just stay on the page if user doesn't want to logout
+        setError("Game has ended. You can continue chatting or logout when ready.");
+        setTimeout(() => setError(''), 5000);
+      }
     });
     
     return () => {
       socket.current.disconnect();
     };
-  }, []);
+  }, [username]);
 
   // Join room once we have username
   useEffect(() => {
@@ -112,67 +275,162 @@ const Main = ({ Id, email }) => {
 
   // Getting word from datamuse  
   const getWord = async () => {
-    // If word already contributed by this player or another player, don't get a new one
-    if (wordContributed || originalWord) return;
+    // Only the drawer should set words
+    if (!isDrawer) {
+      return;
+    }
     
-    const randomNumber = Math.floor(Math.random() * 41);
-    const category = scribbleWords[randomNumber];
-
+    if (wordContributed && originalWord) {
+      return;
+    }
+    
     try {
-      const response = await fetch(`https://api.datamuse.com/words?ml=${category}&max=2`);
+      // Try to get a word from the API
+      const randomNumber = Math.floor(Math.random() * 41);
+      const category = scribbleWords[randomNumber];
+      
+      // Try with higher max to ensure we get results
+      const response = await fetch(`https://api.datamuse.com/words?ml=${category}&max=30`);
       const data = await response.json();
 
-      if (data.length > 0) {
-        const realWord = data[0].word;
-        const maskedWord = maskRandomLetters(realWord);
+      if (data && data.length > 0) {
+        // Filter to ensure good drawing words (single word, reasonable length, only letters)
+        const filteredWords = data.filter(item => {
+          const word = item.word;
+          return word.length >= 3 && 
+                 word.length <= 10 && 
+                 !word.includes(' ') && 
+                 /^[a-zA-Z]+$/.test(word);
+        });
         
-        // Mark that this player has contributed a word
-        setWordContributed(true);
-        
-        // Emit to server so all players get the same word
-        if (socket.current) {
-          socket.current.emit("set_word", {
-            roomId: Id,
-            originalWord: realWord,
-            maskedWord: maskedWord
-          });
+        // If we have filtered words, use one
+        if (filteredWords.length > 0) {
+          // Use a random word from the filtered results
+          const randomIndex = Math.floor(Math.random() * filteredWords.length);
+          const chosenWord = filteredWords[randomIndex].word;
+          
+          // Mask the word
+          const maskedWord = maskRandomLetters(chosenWord);
+          
+          // Mark that this player has contributed a word
+          setWordContributed(true);
+          
+          // Emit to server so all players get the same word
+          if (socket.current) {
+            socket.current.emit("set_word", {
+              roomId: Id,
+              originalWord: chosenWord,
+              maskedWord: maskedWord
+            });
+          }
+        } else {
+          // If filtering left no words, try a backup category
+          tryBackupCategory();
         }
       } else {
-        console.warn("No words returned for category:", category);
+        // If API returns no data, try a backup category
+        tryBackupCategory();
       }
     } catch (err) {
-      console.error("Failed to fetch word:", err);
+      tryBackupCategory();
+    }
+  };
+  
+  // Helper function to try a backup category
+  const tryBackupCategory = async () => {
+    try {
+      // Use a different category for backup
+      const backupCategories = ["animal", "food", "vehicle", "furniture", "clothing"];
+      const backupCategory = backupCategories[Math.floor(Math.random() * backupCategories.length)];
+      
+      const backupResponse = await fetch(`https://api.datamuse.com/words?ml=${backupCategory}&max=30`);
+      const backupData = await backupResponse.json();
+      
+      if (backupData && backupData.length > 0) {
+        // Filter to ensure good drawing words
+        const filteredWords = backupData.filter(item => {
+          const word = item.word;
+          return word.length >= 3 && 
+                 word.length <= 10 && 
+                 !word.includes(' ') && 
+                 /^[a-zA-Z]+$/.test(word);
+        });
+        
+        if (filteredWords.length > 0) {
+          // Use a random word from the filtered results
+          const randomIndex = Math.floor(Math.random() * filteredWords.length);
+          const chosenWord = filteredWords[randomIndex].word;
+          
+          // Mask the word
+          const maskedWord = maskRandomLetters(chosenWord);
+          
+          // Mark that this player has contributed a word
+          setWordContributed(true);
+          
+          // Emit to server so all players get the same word
+          if (socket.current) {
+            socket.current.emit("set_word", {
+              roomId: Id,
+              originalWord: chosenWord,
+              maskedWord: maskedWord
+            });
+          }
+        } else {
+          setError("Failed to get a suitable word. Please try again.");
+          setTimeout(() => setError(''), 3000);
+        }
+      } else {
+        setError("Failed to get a word from API. Please try again.");
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (err) {
+      setError("Error fetching word. Please try again.");
+      setTimeout(() => setError(''), 3000);
     }
   };
 
   // Chat message sending using IO
   const handleChatSubmit = (e) => {
     e.preventDefault();
-    if (timer === 0 || round > 5 || !gameActive) return;
+    if (!gameActive || !gameStarted) return;
 
-    const trimmedInput = chatInput.trim().toLowerCase();
-    const realAnswer = originalWord.toLowerCase();
-
-    // Emit message to specific room
+    const trimmedInput = chatInput.trim();
+    if (!trimmedInput) return; // Don't send empty messages
+    
+    // Always send the message to all players
     socket.current.emit("send_message", {
       roomId: Id,
       username,
       message: chatInput,
     });
 
-    if (trimmedInput === realAnswer && !hasAnswered) {
-      setHasAnswered(true);
-      const baseScore = 5;
-      const bonusFactor = timer / 90;
-      const roundScore = Math.floor(baseScore + (20 * bonusFactor));
-      setScore((prev) => prev + roundScore);
+    // Only check for correct answer if not the drawer and haven't answered yet
+    if (!isDrawer && !hasAnswered) {
+      const userGuess = trimmedInput.toLowerCase();
+      const realAnswer = originalWord.toLowerCase();
       
-      // Add this line to notify the server about the score update
-      socket.current.emit("update_score", { roomId: Id, points: roundScore });
-      
-      console.log(`Correct! You scored ${roundScore} points`);
+      // If correct guess, show visual feedback in the UI
+      if (userGuess === realAnswer) {
+        setHasAnswered(true);
+        
+        // Calculate score - more time left = higher score
+        const baseScore = 5;
+        const bonusFactor = timer / 120; // Since max time is 120 seconds
+        const roundScore = Math.floor(baseScore + (15 * bonusFactor));
+        
+        // Update local score
+        setScore((prev) => prev + roundScore);
+        
+        // Notify server about score update
+        socket.current.emit("update_score", { roomId: Id, points: roundScore });
+        
+        // Add visual feedback
+        setError(`Correct! You scored ${roundScore} points.`);
+        setTimeout(() => setError(''), 2000);
+      }
     }
 
+    // Clear input field
     setChatInput('');
   };
 
@@ -202,7 +460,6 @@ const Main = ({ Id, email }) => {
         });
         setUsername(res.data.username);
       } catch (err) {
-        console.error('Error fetching username:', err);
         setError('Failed to fetch username');
       }
     };
@@ -221,6 +478,13 @@ const Main = ({ Id, email }) => {
     navigate('/login');
   };
 
+  // Function to handle game start
+  const handleStartGame = () => {
+    if(socket.current && isHost) {
+      socket.current.emit("start_game", { roomId: Id });
+    }
+  };
+
   return (
     <div className={styles.playground}>
       <nav className={styles.playNav}>
@@ -228,7 +492,22 @@ const Main = ({ Id, email }) => {
           <div></div>
           <div>Scribble Showdown</div>
         </div>
-        <div className={styles.word}>{showOriginal ? originalWord : word}</div>
+        <div className={styles.word}>
+          {(() => {
+            // For drawer
+            if (isDrawer) {
+              return originalWord || "Getting word...";
+            }
+            // For non-drawer when word is revealed
+            else if (showOriginal) {
+              return originalWord || "Word should be shown";
+            }
+            // For non-drawer during guessing
+            else {
+              return word || "Waiting for drawer to pick a word";
+            }
+          })()}
+        </div>
         
         <div className={styles.playNav__right}>
           <ul>
@@ -240,14 +519,20 @@ const Main = ({ Id, email }) => {
       <main>
         <div className={styles.left}>
           <h1>PLAYERS</h1>
+          {roomFull && <div className={styles.error}>{error}</div>}
+          {error && !roomFull && error.includes('Correct!') ? (
+            <div className={styles.correctGuess}>{error}</div>
+          ) : (
+            error && !roomFull && <div className={styles.error}>{error}</div>
+          )}
           {players && players.length > 0 ? (
             players.sort((a, b) => b.score - a.score).map((player, index) => (
               <div 
                 key={player.username} 
-                className={`${styles.player} ${index === 0 ? styles.topPlayer : ''}`}
+                className={`${styles.player} ${index === 0 ? styles.topPlayer : ''} ${player.isHost ? styles.hostPlayer : ''}`}
               >
                 <p>RANK: <span>{index + 1}</span></p>
-                <p>{player.username}</p>
+                <p>{player.username} {player.isHost ? '(Host)' : ''}</p>
                 <p>POINTS: {player.score}</p>
               </div>
             ))
@@ -256,43 +541,45 @@ const Main = ({ Id, email }) => {
               <p>Waiting for players...</p>
             </div>
           )}
+          
+          {/* Game controls and status messages */}
+          <div className={styles.gameControls}>
+            {isHost && !gameStarted && players.length === 2 && (
+              <button className={styles.startButton} onClick={handleStartGame}>
+                Start Game
+              </button>
+            )}
+            
+            {isHost && !gameStarted && players.length < 2 && (
+              <div className={styles.waitingMessage}>
+                Waiting for another player to join...
+              </div>
+            )}
+            
+            {!isHost && !gameStarted && players.length === 2 && (
+              <div className={styles.waitingMessage}>
+                Waiting for host to start the game...
+              </div>
+            )}
+            
+            {gameStarted && (
+              <div className={styles.gameStatus}>
+                {isDrawer ? "You are drawing!" : `${currentDrawer} is drawing`}
+              </div>
+            )}
+          </div>
         </div>
         <div className={styles.middle}>
           <div className={styles.middle__top}>
             <div className={styles.rounds}>
               <div>ROUND</div>
-              <div style={{ whiteSpace: "nowrap" }}>{round} / 5</div>
+              <div style={{ whiteSpace: "nowrap" }}>{round} / 6</div>
             </div>
             <div className={styles.rounds}>
               <div>TIMER</div>
               <div style={{ whiteSpace: "nowrap" }}>{timer} s</div>
             </div>
-            <div className={styles.pick}>
-              {/* <div className={styles.pencil}>
-                <label htmlFor="pencil">PENCIL</label>
-                <input 
-                  type="number" 
-                  name="pencil" 
-                  id="pencil" 
-                  placeholder="4" 
-                  min="1" 
-                  max="50" 
-                  step="1" 
-                  value={pencilSize}
-                  onChange={handlePencilSizeChange}
-                />
-              </div> */}
-              {/* <div className={styles.color}>
-                <label htmlFor="pencilColor">COLOR</label>
-                <input 
-                  type="color" 
-                  name="pencilColor" 
-                  id="pencilColor" 
-                  value={pencilColor}
-                  onChange={handleColorChange}
-                />
-              </div> */}
-            </div>
+            <div className={styles.pick}></div>
           </div>
           <div className={styles.main__main}>
             <HandDrawingCanvas 
@@ -301,13 +588,17 @@ const Main = ({ Id, email }) => {
               eraserSize={30} 
               socket={socket.current}
               roomId={Id}
+              isReadOnly={!isDrawer && gameStarted}
             />
           </div>
         </div>
         <div className={styles.right}>
           <div className={styles.chats} ref={chatBoxRef}>
             {chatMessages.map((msg, index) => (
-              <div key={index} className={styles.chat}>
+              <div 
+                key={index} 
+                className={`${styles.chat} ${msg.username === 'System' ? styles.systemMessage : ''}`}
+              >
                 <p>{msg.username}</p>
                 <p>{msg.message}</p>
               </div>

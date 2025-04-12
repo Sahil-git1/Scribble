@@ -50,15 +50,18 @@ const io = new Server(server, {
 // Enhanced in-memory structure to hold room data
 const rooms = {
   // roomId: {
-  //   players: { socketId: { username, score } },
+  //   players: { socketId: { username, score, isHost, isCurrentDrawer } },
   //   gameState: { 
-  //     timer: 90, 
+  //     timer: 10, 
   //     round: 1, 
   //     originalWord: '', 
   //     maskedWord: '', 
   //     active: true,
   //     showOriginal: false,
-  //     timerInterval: null
+  //     timerInterval: null,
+  //     hasStarted: false,
+  //     playerCount: 0,
+  //     currentDrawer: null
   //   }
   // }
 };
@@ -88,8 +91,11 @@ const startNewRound = (roomId) => {
       clearInterval(rooms[roomId].gameState.timerInterval);
     }
     
+    // Switch drawer at the start of each round
+    switchDrawer(roomId);
+    
     // Reset round state
-    rooms[roomId].gameState.timer = 90;
+    rooms[roomId].gameState.timer = 120;
     rooms[roomId].gameState.showOriginal = false;
     
     // Start timer
@@ -106,7 +112,7 @@ const startNewRound = (roomId) => {
           // After showing original word, proceed to next round
           setTimeout(() => {
             if (rooms[roomId]) {
-              if (rooms[roomId].gameState.round < 5) {
+              if (rooms[roomId].gameState.round < 6) {
                 rooms[roomId].gameState.round += 1;
                 io.to(roomId).emit("new_round");
                 startNewRound(roomId);
@@ -116,7 +122,7 @@ const startNewRound = (roomId) => {
                 io.to(roomId).emit("game_ended");
               }
             }
-          }, 7000);
+          }, 4000); // Reduced time to show word between rounds
         } else {
           updateRoomState(roomId);
         }
@@ -129,11 +135,63 @@ const startNewRound = (roomId) => {
   }
 };
 
+// Function to switch the current drawer
+const switchDrawer = (roomId) => {
+  if (rooms[roomId] && rooms[roomId].players) {
+    const playerIds = Object.keys(rooms[roomId].players);
+    if (playerIds.length < 2) return;
+    
+    // Get current drawer
+    const currentDrawerId = rooms[roomId].gameState.currentDrawer;
+    let nextDrawerIndex = 0;
+    
+    if (currentDrawerId) {
+      // Find the index of the current drawer
+      const currentDrawerIndex = playerIds.indexOf(currentDrawerId);
+      if (currentDrawerIndex !== -1) {
+        // Get the next drawer (or circle back to first player)
+        nextDrawerIndex = (currentDrawerIndex + 1) % playerIds.length;
+      }
+    }
+    
+    // Set all players to non-drawer
+    for (const playerId of playerIds) {
+      rooms[roomId].players[playerId].isCurrentDrawer = false;
+    }
+    
+    // Set new drawer
+    const nextDrawerId = playerIds[nextDrawerIndex];
+    rooms[roomId].players[nextDrawerId].isCurrentDrawer = true;
+    rooms[roomId].gameState.currentDrawer = nextDrawerId;
+    
+    console.log(`Switched drawer in room ${roomId} to ${rooms[roomId].players[nextDrawerId].username}`);
+    
+    // Notify clients about the new drawer
+    io.to(roomId).emit("update_players", getPlayerList(roomId));
+    
+    // Send individual notifications to players
+    for (const playerId of playerIds) {
+      const isDrawer = playerId === nextDrawerId;
+      io.to(playerId).emit("drawer_update", { 
+        isDrawer, 
+        drawerName: rooms[roomId].players[nextDrawerId].username 
+      });
+    }
+  }
+};
+
 io.on("connection", (socket) => {
   console.log("New user connected: " + socket.id);
 
   // Join room
   socket.on("join_room", ({ roomId, username }) => {
+    // Check if room exists and has 2 players already
+    if (rooms[roomId] && Object.keys(rooms[roomId].players).length >= 2) {
+      console.log(`Room ${roomId} is full, rejecting player ${username}`);
+      socket.emit("room_full", { message: "This room already has 2 players." });
+      return;
+    }
+    
     socket.join(roomId);
 
     // Initialize room if it doesn't exist
@@ -141,13 +199,16 @@ io.on("connection", (socket) => {
       rooms[roomId] = {
         players: {},
         gameState: { 
-          timer: 90, 
+          timer: 120, 
           round: 1, 
-          originalWord: '', 
-          maskedWord: '', 
+          originalWord: '', // Empty - will be set by drawer
+          maskedWord: '', // Empty - will be set by drawer 
           active: true,
           showOriginal: false,
-          timerInterval: null
+          timerInterval: null,
+          hasStarted: false,
+          playerCount: 0,
+          currentDrawer: null
         }
       };
     }
@@ -156,32 +217,95 @@ io.on("connection", (socket) => {
     if (!rooms[roomId].players) {
       rooms[roomId].players = {};
     }
-    rooms[roomId].players[socket.id] = { username, score: 0 };
+    
+    // Check if this is the first player (host)
+    const isHost = Object.keys(rooms[roomId].players).length === 0;
+    const isCurrentDrawer = isHost; // First player is also the first drawer
+    
+    rooms[roomId].players[socket.id] = { 
+      username, 
+      score: 0, 
+      isHost,
+      isCurrentDrawer
+    };
+    
+    if (isCurrentDrawer) {
+      rooms[roomId].gameState.currentDrawer = socket.id;
+    }
+    
+    rooms[roomId].gameState.playerCount = Object.keys(rooms[roomId].players).length;
+
+    console.log(`Player count in room ${roomId}: ${rooms[roomId].gameState.playerCount}`);
+    console.log(`Players in room ${roomId}:`, Object.keys(rooms[roomId].players).map(id => 
+      `${rooms[roomId].players[id].username} (${rooms[roomId].players[id].isHost ? 'Host' : 'Guest'})`
+    ));
 
     // Send current game state to the joining player
     const gameStateForClient = { ...rooms[roomId].gameState };
     delete gameStateForClient.timerInterval;
     socket.emit("game_state_update", gameStateForClient);
+    
+    // Notify the player if they are the drawer
+    if (isCurrentDrawer) {
+      socket.emit("drawer_update", { 
+        isDrawer: true,
+        drawerName: username 
+      });
+    }
 
     // Notify room of updated player list
     io.to(roomId).emit("update_players", getPlayerList(roomId));
 
-    console.log(`User ${username} joined room ${roomId}`);
-    
-    // If this is the first player and the game isn't active, start it
-    if (Object.keys(rooms[roomId].players).length === 1 && !rooms[roomId].gameState.active) {
-      rooms[roomId].gameState.active = true;
-      // We'll get a new word when the client emits 'set_word'
-    }
+    console.log(`User ${username} joined room ${roomId}, isHost: ${isHost}`);
   });
 
   // Handle sending a message
   socket.on("send_message", ({ roomId, username, message }) => {
     io.to(roomId).emit("receive_message", { username, message });
     
-    // Check if message matches the answer
-    if (rooms[roomId]?.gameState?.originalWord?.toLowerCase() === message.trim().toLowerCase()) {
+    // Check if message matches the answer and game is active
+    if (rooms[roomId]?.gameState?.active && 
+        rooms[roomId]?.gameState?.originalWord?.toLowerCase() === message.trim().toLowerCase()) {
       console.log(`${username} guessed correctly: ${message}`);
+      
+      // Add announcement message about correct guess
+      io.to(roomId).emit("receive_message", { 
+        username: "System", 
+        message: `${username} guessed the word correctly: ${rooms[roomId].gameState.originalWord}!`
+      });
+      
+      // Clear the current timer interval
+      if (rooms[roomId].gameState.timerInterval) {
+        clearInterval(rooms[roomId].gameState.timerInterval);
+        rooms[roomId].gameState.timerInterval = null;
+      }
+      
+      // Show the original word to everyone briefly
+      rooms[roomId].gameState.showOriginal = true;
+      updateRoomState(roomId);
+      
+      // Wait a moment, then advance to next round
+      setTimeout(() => {
+        if (rooms[roomId]) {
+          if (rooms[roomId].gameState.round < 6) {
+            console.log(`Advancing to next round after correct guess by ${username}`);
+            
+            // Move to next round
+            rooms[roomId].gameState.round += 1;
+            io.to(roomId).emit("new_round");
+            io.to(roomId).emit("receive_message", { 
+              username: "System", 
+              message: `Starting round ${rooms[roomId].gameState.round}...`
+            });
+            
+            startNewRound(roomId);
+          } else {
+            // Game over
+            rooms[roomId].gameState.active = false;
+            io.to(roomId).emit("game_ended");
+          }
+        }
+      }, 2000); // Show correct word for 2 seconds before advancing
     }
   });
 
@@ -195,21 +319,30 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Set new word for the round - any player can contribute words
+  // Set new word for the round - only the drawer can contribute words
   socket.on("set_word", ({ roomId, originalWord, maskedWord }) => {
     if (rooms[roomId]) {
-      // Only accept new words if we're at the start of a round or don't have a word yet
-      if (rooms[roomId].gameState.timer === 90 || !rooms[roomId].gameState.originalWord) {
+      console.log(`Received set_word event for room ${roomId}, word: ${originalWord}, masked: ${maskedWord}`);
+      
+      // More permissive check: accept word if it's from current drawer OR if no word is set yet
+      const isCurrentDrawer = rooms[roomId].players[socket.id]?.isCurrentDrawer;
+      const noWordSet = !rooms[roomId].gameState.originalWord || rooms[roomId].gameState.originalWord === '';
+      
+      if (isCurrentDrawer || noWordSet) {
         rooms[roomId].gameState.originalWord = originalWord;
         rooms[roomId].gameState.maskedWord = maskedWord;
         
-        // Broadcast word to all players
+        console.log(`Set word for room ${roomId}: original=${originalWord}, masked=${maskedWord}`);
+        
+        // Always broadcast word to all players immediately
         updateRoomState(roomId);
         
-        // If timer isn't running, start it
-        if (!rooms[roomId].gameState.timerInterval) {
+        // If the game has started and timer isn't running, start it
+        if (rooms[roomId].gameState.hasStarted && !rooms[roomId].gameState.timerInterval) {
           startNewRound(roomId);
         }
+      } else {
+        console.log(`Word contribution rejected. isCurrentDrawer: ${isCurrentDrawer}, existingWord: ${rooms[roomId].gameState.originalWord}`);
       }
     }
   });
@@ -218,6 +351,122 @@ io.on("connection", (socket) => {
   socket.on("send_drawing", (data) => {
     // Broadcast drawing data to all other clients in the room
     socket.to(data.roomId).emit("receive_drawing", data);
+  });
+
+  // Add new game start event
+  socket.on("start_game", ({ roomId }) => {
+    console.log(`Received start_game event for room ${roomId}`);
+    
+    if (!rooms[roomId]) {
+      console.log(`Room ${roomId} not found`);
+      socket.emit("start_game_error", { message: "Room not found." });
+      return;
+    }
+    
+    if (!rooms[roomId].players || !rooms[roomId].players[socket.id]) {
+      console.log(`Player not found in room ${roomId}`);
+      socket.emit("start_game_error", { message: "You are not in this room." });
+      return;
+    }
+    
+    if (!rooms[roomId].players[socket.id].isHost) {
+      console.log(`Non-host player tried to start the game in room ${roomId}`);
+      socket.emit("start_game_error", { message: "Only the host can start the game." });
+      return;
+    }
+    
+    const playerCount = Object.keys(rooms[roomId].players).length;
+    console.log(`Player count check for room ${roomId}: ${playerCount}`);
+    
+    if (playerCount < 2) {
+      console.log(`Not enough players in room ${roomId}: ${playerCount}`);
+      socket.emit("start_game_error", { message: "Need at least 2 players to start the game." });
+      return;
+    }
+    
+    console.log(`Starting game in room ${roomId}`);
+    
+    // Set default temporary words to ensure players always see something
+    const defaultWords = ["cat", "dog", "sun", "moon", "star"];
+    const defaultWord = defaultWords[Math.floor(Math.random() * defaultWords.length)];
+    const defaultMasked = defaultWord.replace(/[a-z]/g, (c, i) => i % 2 === 0 ? c : '_');
+    
+    // Set initial game state with default word
+    rooms[roomId].gameState.originalWord = defaultWord;
+    rooms[roomId].gameState.maskedWord = defaultMasked;
+    rooms[roomId].gameState.hasStarted = true;
+    rooms[roomId].gameState.active = true;
+    
+    // Start the first round
+    io.to(roomId).emit("game_started");
+    updateRoomState(roomId); // Send game state immediately
+    startNewRound(roomId);
+  });
+
+  // Add restart game event
+  socket.on("restart_game", ({ roomId }) => {
+    console.log(`Received restart_game event for room ${roomId}`);
+    
+    if (!rooms[roomId]) {
+      console.log(`Room ${roomId} not found for restart`);
+      socket.emit("restart_game_error", { message: "Room not found." });
+      return;
+    }
+    
+    if (!rooms[roomId].players || !rooms[roomId].players[socket.id]) {
+      console.log(`Player not found in room ${roomId} for restart`);
+      socket.emit("restart_game_error", { message: "You are not in this room." });
+      return;
+    }
+    
+    if (!rooms[roomId].players[socket.id].isHost) {
+      console.log(`Non-host player tried to restart the game in room ${roomId}`);
+      socket.emit("restart_game_error", { message: "Only the host can restart the game." });
+      return;
+    }
+    
+    console.log(`Restarting game in room ${roomId}`);
+    
+    // Set default temporary words to ensure players always see something
+    const defaultWords = ["house", "tree", "flower", "car", "boat"];
+    const defaultWord = defaultWords[Math.floor(Math.random() * defaultWords.length)];
+    const defaultMasked = defaultWord.replace(/[a-z]/g, (c, i) => i % 2 === 0 ? c : '_');
+    
+    // Reset game state but keep players
+    rooms[roomId].gameState = { 
+      timer: 120, 
+      round: 1, 
+      originalWord: defaultWord, // Set a default word 
+      maskedWord: defaultMasked, // And masked version
+      active: true,
+      showOriginal: false,
+      timerInterval: null,
+      hasStarted: true, // Start immediately on restart
+      playerCount: Object.keys(rooms[roomId].players).length,
+      currentDrawer: null
+    };
+    
+    // Reset scores for all players and select first drawer
+    const playerIds = Object.keys(rooms[roomId].players);
+    for (const playerId of playerIds) {
+      rooms[roomId].players[playerId].score = 0;
+      rooms[roomId].players[playerId].isCurrentDrawer = false;
+    }
+    
+    // Set first player as drawer
+    if (playerIds.length > 0) {
+      const firstDrawerId = playerIds[0];
+      rooms[roomId].players[firstDrawerId].isCurrentDrawer = true;
+      rooms[roomId].gameState.currentDrawer = firstDrawerId;
+    }
+    
+    // Notify clients about player updates
+    io.to(roomId).emit("update_players", getPlayerList(roomId));
+    
+    // Start the game again
+    io.to(roomId).emit("game_restarted");
+    updateRoomState(roomId);
+    startNewRound(roomId);
   });
 
  // Handle disconnect
